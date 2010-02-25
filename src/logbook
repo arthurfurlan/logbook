@@ -102,9 +102,9 @@ class LogBook(object):
 			raise UpdateAbortedError()
 
 		self.config = self.get_project_config(project)
-		self.editor = LogBookEditor(self.config)
-
 		self.call_hooks(LOGBOOK_HOOKS['pre'])
+
+		self.editor = LogBookEditor(self.config)
 		self.editor.parse()
 
 		if not message:
@@ -114,7 +114,7 @@ class LogBook(object):
 			self.editor.add_message_file(message)
 
 		self.editor.commit_changes()
-		self.call_hooks(LOGBOOK_HOOKS['post'])
+		self.call_hooks(LOGBOOK_HOOKS['post'], send_all_args=True)
 
 	def check_user_root(self):
 		login = getpass.getuser()
@@ -210,15 +210,18 @@ class LogBook(object):
 		except AttributeError:
 			return
 
-	def call_hooks(self, hooksd):
+	def call_hooks(self, hooksd, send_all_args=False):
 
 		hooksd_dir = os.path.join(self.get_project_basedir(
 			self.config['project']), hooksd)
 		for s in glob.glob(hooksd_dir + '/*'):
 			script_file = os.path.join(hooksd_dir, s)
 			if os.access(script_file, os.X_OK):
-				subprocess.call([script_file, self.config['project'],
-					self.editor.get_current_version()])
+				cmd_args = [script_file, self.config['project']]
+				if send_all_args:
+					cmd_args.append(self.editor.get_current_version())
+					cmd_args.append(self.editor.tmp_filename)
+				subprocess.call(cmd_args)
 
 class LogBookEditor(object):
 
