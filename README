@@ -1,0 +1,3 @@
+Logbook is intended to provide an easy way to manage the documentation
+of your servers using the Debian's Changelog syntax (even on non-Debian
+machines) and date-based versions.
