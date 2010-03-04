@@ -62,8 +62,8 @@ class LogBook(object):
 			return self.create_project(options.c, options.f)
 		elif options.d:
 			return self.delete_project(options.d)
-		elif options.u:
-			return self.update_project(options.u, options.m)
+		elif options.u or args:
+			return self.update_project(options.u or args[0], options.m)
 		else:
 			parser.print_help()
 
