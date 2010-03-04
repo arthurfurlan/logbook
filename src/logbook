@@ -47,6 +47,8 @@ class LogBook(object):
 			help='update message')
 		parser.add_option('-l', metavar='LABEL',
 			help='project label to be used in the LogBook file')
+		parser.add_option('-b', metavar='BASEDIR',
+			help='set the logbook base directory')
 		parser.add_option('-s', metavar='PROJECT',
 			help='show the logbook of a project')
 		parser.add_option('-c', metavar='PROJECT',
@@ -61,7 +63,8 @@ class LogBook(object):
 		if options.s:
 			return self.show_project(options.s)
 		elif options.c:
-			return self.create_project(options.c, options.f, options.l)
+			return self.create_project(options.c, options.f,
+					options.l, options.b)
 		elif options.d:
 			return self.delete_project(options.d)
 		elif options.u or args:
@@ -79,7 +82,7 @@ class LogBook(object):
 		return subprocess.call([self.config['pager'],
 			self.config['logfile']])
 
-	def create_project(self, project, logfile=None, label=None):
+	def create_project(self, project, logfile=None, label=None, basedir=None):
 
 		# create project directory
 		if self.project_exists(project):
@@ -91,11 +94,16 @@ class LogBook(object):
 		os.makedirs(project_basedir)
 		
 		# create the project's hooks dirs
+		if basedir:
+			if not os.path.exists(basedir):
+				os.makedirs(basedir)
+			project_basedir = basedir
 		for hooks_basedir in LOGBOOK_HOOKS.values():
 			hooks_basedir = os.path.join(project_basedir, hooks_basedir)
-			os.mkdir(hooks_basedir)
+			if not os.path.exists(hooks_basedir):
+				os.mkdir(hooks_basedir)
 
-		self.create_config_file(project, logfile, label)
+		self.create_config_file(project, logfile, label, basedir)
 
 	def delete_project(self, project):
 
@@ -140,14 +148,14 @@ class LogBook(object):
 					return False
 		return True
 
-	def create_config_file(self, project, logfile, label):
+	def create_config_file(self, project, logfile, label, basedir):
 
 		project_basedir = self.get_project_basedir(project)
 		config_filename = os.path.join(project_basedir, 'config')
 
 		# get the (real) location of the logfile
 		if not logfile:
-			logfile = os.path.join(project_basedir, 'logbook')
+			logfile = os.path.join(basedir or project_basedir, 'logbook')
 		elif '~' in logfile:
 			logfile = os.path.expanduser(logfile)
 		logfile = os.path.realpath(logfile)
@@ -162,6 +170,8 @@ class LogBook(object):
 
 		if label:
 			config_lines.append(u"label = '%s'" % label)
+		if basedir:
+			config_lines.append(u"basedir = '%s'" % basedir)
 
 		# create the configuration file
 		file_handler = file(config_filename, 'w')
@@ -230,8 +240,9 @@ class LogBook(object):
 
 	def call_hooks(self, hooksd, send_all_args=False):
 
-		hooksd_dir = os.path.join(self.get_project_basedir(
-			self.config['project']), hooksd)
+		basedir = self.config['basedir'] or \
+				self.get_project_basedir(self.config['project'])
+		hooksd_dir = os.path.join(basedir, hooksd)
 		for s in glob.glob(hooksd_dir + '/*'):
 			script_file = os.path.join(hooksd_dir, s)
 			if os.access(script_file, os.X_OK):
