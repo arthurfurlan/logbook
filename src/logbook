@@ -245,8 +245,7 @@ class LogBook(object):
 
 	def call_hooks(self, hooksd, send_all_args=False):
 
-		basedir = self.config['basedir'] or \
-				self.get_project_basedir(self.config['project'])
+		basedir = self.config.get('basedir', self.get_project_basedir(self.config['project']))
 		hooksd_dir = os.path.join(basedir, hooksd)
 		for s in glob.glob(hooksd_dir + '/*'):
 			script_file = os.path.join(hooksd_dir, s)
