@@ -184,11 +184,16 @@ class LogBook(object):
 
 	def get_project_config(self, project):
 
-		project_basedir = self.get_project_basedir(project)
-		config_filename = os.path.join(project_basedir, 'config')
-
 		config = {}
+		project_basedir = self.get_project_basedir(project)
+
+		# load general config
+		config_filename = os.path.join(os.path.dirname(project_basedir), 'config')
 		execfile(config_filename, locals(), config)
+
+		# load project config
+		config_filename = os.path.join(project_basedir, 'config')
+		execfile(config_filename, config, config)
 		config = self.get_environ_config(config)
 
 		config['project'] = project
