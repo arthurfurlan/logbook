@@ -45,6 +45,8 @@ class LogBook(object):
 			help='points the logfile to an external file')
 		parser.add_option('-m', metavar='MESSAGE',
 			help='update message')
+		parser.add_option('-l', metavar='LABEL',
+			help='project label to be used in the LogBook file')
 		parser.add_option('-s', metavar='PROJECT',
 			help='show the logbook of a project')
 		parser.add_option('-c', metavar='PROJECT',
@@ -59,7 +61,7 @@ class LogBook(object):
 		if options.s:
 			return self.show_project(options.s)
 		elif options.c:
-			return self.create_project(options.c, options.f)
+			return self.create_project(options.c, options.f, options.l)
 		elif options.d:
 			return self.delete_project(options.d)
 		elif options.u or args:
@@ -77,7 +79,7 @@ class LogBook(object):
 		return subprocess.call([self.config['pager'],
 			self.config['logfile']])
 
-	def create_project(self, project, logfile=None):
+	def create_project(self, project, logfile=None, label=None):
 
 		# create project directory
 		if self.project_exists(project):
@@ -93,7 +95,7 @@ class LogBook(object):
 			hooks_basedir = os.path.join(project_basedir, hooks_basedir)
 			os.mkdir(hooks_basedir)
 
-		self.create_config_file(project, logfile)
+		self.create_config_file(project, logfile, label)
 
 	def delete_project(self, project):
 
@@ -138,7 +140,7 @@ class LogBook(object):
 					return False
 		return True
 
-	def create_config_file(self, project, logfile):
+	def create_config_file(self, project, logfile, label):
 
 		project_basedir = self.get_project_basedir(project)
 		config_filename = os.path.join(project_basedir, 'config')
@@ -154,10 +156,16 @@ class LogBook(object):
 		if not os.path.exists(logfile):
 			open(logfile, 'w').close()
 
+		# create the configuration content
+		config_lines = []
+		config_lines.append(u"logfile = '%s'" % logfile)
+
+		if label:
+			config_lines.append(u"label = '%s'" % label)
+
 		# create the configuration file
-		config_text = u"logfile = '%s'\n" % logfile
 		file_handler = file(config_filename, 'w')
-		file_handler.write(config_text)
+		file_handler.write('\n'.join(config_lines))
 		file_handler.close()
 
 	def get_project_basedir(self, project):
@@ -378,6 +386,7 @@ class LogBookEditor(object):
 	def get_empty_entry(self):
 		return {
 			'project': self.config['project'],
+			'label': self.config.get('label', self.config['project']),
 			'version': self.get_current_version(),
 			'hostname': socket.gethostname(),
 			'name': self.config['name'],
@@ -389,7 +398,7 @@ class LogBookEditor(object):
 		}
 
 	def get_formatted_entry(self, entry):
-		text = '%s (%s) %s; %s\n\n' % (entry['project'], entry['version'],
+		text = '%s (%s) %s; %s\n\n' % (entry['label'], entry['version'],
 				entry['hostname'], ' '.join(entry['attrs']))
 		for a in entry['names_order']:
 			if len(entry['names_order']) > 1:
