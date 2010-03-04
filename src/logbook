@@ -39,10 +39,10 @@ class LogBook(object):
 	def run(self):
 
 		# configure and parse the args
-		usage = 'Usage: %prog OPTIONS'
+		usage = 'Usage: %prog [OPTIONS] PROJECT'
 		parser = optparse.OptionParser(usage=usage)
-		parser.add_option('-l', metavar='LOGFILE',
-			help='use an external logfile in a project creation')
+		parser.add_option('-f', metavar='LOGFILE',
+			help='points the logfile to an external file')
 		parser.add_option('-m', metavar='MESSAGE',
 			help='update message')
 		parser.add_option('-s', metavar='PROJECT',
@@ -59,7 +59,7 @@ class LogBook(object):
 		if options.s:
 			return self.show_project(options.s)
 		elif options.c:
-			return self.create_project(options.c, options.l)
+			return self.create_project(options.c, options.f)
 		elif options.d:
 			return self.delete_project(options.d)
 		elif options.u:
