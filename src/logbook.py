@@ -23,7 +23,7 @@ import optparse
 import subprocess
 
 LOGBOOK_BASEDIR = os.path.expanduser('~/.logbook')
-LOGBOOK_HOOKS = {'pre':'hooks.d-pre', 'post':'hooks.d-post',}
+LOGBOOK_HOOKS = {'pre':'hooks.d-pre', 'saved':'hooks.d-saved', 'post':'hooks.d-post',}
 
 class ProjectExistsError(Exception):
 	pass
@@ -133,6 +133,7 @@ class LogBook(object):
 		else:
 			self.editor.add_message_file(message)
 
+		self.call_hooks(LOGBOOK_HOOKS['saved'], send_all_args=True)
 		self.editor.commit_changes()
 		self.call_hooks(LOGBOOK_HOOKS['post'], send_all_args=True)
 
@@ -248,6 +249,11 @@ class LogBook(object):
 
 		basedir = self.config.get('basedir', self.get_project_basedir(self.config['project']))
 		hooksd_dir = os.path.join(basedir, hooksd)
+
+		if not os.path.exists(hooksd_dir):
+			os.mkdir(hooksd_dir)
+			return
+
 		for s in glob.glob(hooksd_dir + '/*'):
 			script_file = os.path.join(hooksd_dir, s)
 			if os.access(script_file, os.X_OK):
