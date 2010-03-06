@@ -189,7 +189,8 @@ class LogBook(object):
 
 		# load general config
 		config_filename = os.path.join(os.path.dirname(project_basedir), 'config')
-		execfile(config_filename, locals(), config)
+		if os.path.exists(config_filename):
+			execfile(config_filename, locals(), config)
 
 		# load project config
 		config_filename = os.path.join(project_basedir, 'config')
