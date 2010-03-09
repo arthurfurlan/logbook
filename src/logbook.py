@@ -286,7 +286,7 @@ class LogBookEditor(object):
 		self.current_entry = self.get_current_entry()
 		
 		current_time = ''
-		if self.config['show_time']:
+		if self.config.get('show_time'):
 			current_time = time.strftime('%H:%M ')
 		task_content  = '  * %s\n' % current_time
 
@@ -346,7 +346,7 @@ class LogBookEditor(object):
 	def get_cursor_position(self):
 		row, col = 1, 5
 
-		if self.config['show_time']:
+		if self.config.get('show_time'):
 			col += 6
 
 		for n in self.current_entry['names_order']:
