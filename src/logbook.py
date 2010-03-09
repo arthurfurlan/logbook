@@ -95,6 +95,7 @@ class LogBook(object):
 		
 		# create the project's hooks dirs
 		if basedir:
+			basedir = os.path.realpath(basedir)
 			if not os.path.exists(basedir):
 				os.makedirs(basedir)
 			project_basedir = basedir
