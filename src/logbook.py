@@ -46,7 +46,7 @@ class LogBook(object):
 		parser.add_option('-m', metavar='MESSAGE',
 			help='update message')
 		parser.add_option('-l', metavar='LABEL',
-			help='project label to be used in the LogBook file')
+			help='project label to be used in the logbook file')
 		parser.add_option('-b', metavar='BASEDIR',
 			help='set the logbook base directory')
 		parser.add_option('-s', metavar='PROJECT',
@@ -57,6 +57,8 @@ class LogBook(object):
 			help='update a project')
 		parser.add_option('-d', metavar='PROJECT',
 			help='delete a project')
+		parser.add_option('-t', action='count',
+			help='show the current time on each logbook task')
 		(options, args) = parser.parse_args()
 
 		# execute the action based in the parsed args
@@ -64,7 +66,7 @@ class LogBook(object):
 			return self.show_project(options.s)
 		elif options.c:
 			return self.create_project(options.c, options.f,
-					options.l, options.b)
+					options.l, options.b, bool(options.t))
 		elif options.d:
 			return self.delete_project(options.d)
 		elif options.u or args:
@@ -82,7 +84,7 @@ class LogBook(object):
 		return subprocess.call([self.config['pager'],
 			self.config['logfile']])
 
-	def create_project(self, project, logfile=None, label=None, basedir=None):
+	def create_project(self, project, logfile=None, label=None, basedir=None, show_time=False):
 
 		# create project directory
 		if self.project_exists(project):
@@ -104,7 +106,7 @@ class LogBook(object):
 			if not os.path.exists(hooks_basedir):
 				os.mkdir(hooks_basedir)
 
-		self.create_config_file(project, logfile, label, basedir)
+		self.create_config_file(project, logfile, label, basedir, show_time)
 
 	def delete_project(self, project):
 
@@ -150,7 +152,7 @@ class LogBook(object):
 					return False
 		return True
 
-	def create_config_file(self, project, logfile, label, basedir):
+	def create_config_file(self, project, logfile, label, basedir, show_time):
 
 		project_basedir = self.get_project_basedir(project)
 		config_filename = os.path.join(project_basedir, 'config')
@@ -169,6 +171,7 @@ class LogBook(object):
 		# create the configuration content
 		config_lines = []
 		config_lines.append(u"logfile = '%s'" % logfile)
+		config_lines.append(u'show_time = %s' % show_time)
 
 		if label:
 			config_lines.append(u"label = '%s'" % label)
@@ -281,7 +284,13 @@ class LogBookEditor(object):
 
 	def parse(self):
 		self.current_entry = self.get_current_entry()
-		self.add_entry_tasks(self.current_entry, self.config['name'], '  * \n',
+		
+		current_time = ''
+		if self.config['show_time']:
+			current_time = time.strftime('%H:%M ')
+		task_content  = '  * %s\n' % current_time
+
+		self.add_entry_tasks(self.current_entry, self.config['name'], task_content,
 			move_last_breakline=True)
 
 	def edit_file(self):
@@ -336,6 +345,10 @@ class LogBookEditor(object):
 
 	def get_cursor_position(self):
 		row, col = 1, 5
+
+		if self.config['show_time']:
+			col += 6
+
 		for n in self.current_entry['names_order']:
 			if len(self.current_entry['names_order']) > 1:
 				row += 1
