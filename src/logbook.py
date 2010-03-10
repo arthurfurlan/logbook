@@ -61,6 +61,9 @@ class LogBook(object):
             help='show the current time on each logbook task')
         (options, args) = parser.parse_args()
 
+        if not len(args) < 0:
+            args.append('default')
+
         # execute the action based in the parsed args
         if options.s:
             return self.show_project(options.s)
