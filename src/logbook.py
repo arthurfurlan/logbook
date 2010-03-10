@@ -164,6 +164,10 @@ class LogBook(object):
 			logfile = os.path.expanduser(logfile)
 		logfile = os.path.realpath(logfile)
 
+		# create the logfile if it doesn't exists
+		if not os.path.exists(logfile):
+			open(logfile, 'w').close()
+
 		# create the configuration content
 		config_lines = []
 		config_lines.append(u"logfile = '%s'" % logfile)
