@@ -37,6 +37,7 @@ class UpdateAbortedError(Exception):
 class LogBook(object):
 
     def run(self):
+        self.get_global_config()
 
         # configure and parse the args
         usage = 'Usage: %prog [OPTIONS] PROJECT'
@@ -75,7 +76,6 @@ class LogBook(object):
             return self.delete_project(options.d)
         else:
             if not options.u and not(args):
-                self.config = self.get_global_config()
                 if 'default' not in self.config:
                     raise ProjectDoesNotExistError(
                         'default project could not be found')
@@ -93,7 +93,7 @@ class LogBook(object):
             raise ProjectDoesNotExistError(
                 'project "%s" could not be found.' % project)
 
-        self.config = self.get_project_config(project)
+        self.get_project_config(project)
         return subprocess.call([self.config['pager'],
             self.config['logfile']])
 
@@ -137,7 +137,7 @@ class LogBook(object):
         elif not self.check_user_root():
             raise UpdateAbortedError()
 
-        self.config = self.get_project_config(project)
+        self.get_project_config(project)
         self.call_hooks(LOGBOOK_HOOKS['pre'])
 
         self.editor = LogBookEditor(self.config)
@@ -209,14 +209,14 @@ class LogBook(object):
 
     def get_global_config(self):
 
-        config = {}
+        self.config = {}
 
         # load global config
         config_filename = os.path.join(LOGBOOK_BASEDIR, 'config')
         if os.path.exists(config_filename):
-            execfile(config_filename, locals(), config)
+            execfile(config_filename, {}, self.config)
 
-        return config
+        return self.config
 
     def get_project_config(self, project):
 
@@ -225,45 +225,46 @@ class LogBook(object):
 
         # load project config
         config_filename = os.path.join(project_basedir, 'config')
-        execfile(config_filename, config, config)
-        config = self.get_environ_config(config)
+        execfile(config_filename, {}, config)
+        self.config.update(config)
 
-        config['project'] = project
-        config['user'] = getpass.getuser()
+        self.get_environ_config()
+        self.config['project'] = project
+        self.config['user'] = getpass.getuser()
 
-        return config
+        return self.config
 
-    def get_environ_config(self, config):
+    def get_environ_config(self):
 
-        if not config.has_key('editor'):
+        if not self.config.has_key('editor'):
             editor = os.environ.get('EDITOR')
             if not editor:
                 # /etc/alternatives/editor in debian
                 # defaults to "nano" command
                 editor = 'editor'
-            config['editor'] = editor
+            self.config['editor'] = editor
 
-        if not config.has_key('name') or not config.has_key('email'):
+        if not self.config.has_key('name') or not self.config.has_key('email'):
             debemail =  os.environ.get('DEBEMAIL')
             if not debemail:
-                if not config.has_key('name'):
-                    config['name'] = getpass.getuser()
-                if not config.has_key('email'):
+                if not self.config.has_key('name'):
+                    self.config['name'] = getpass.getuser()
+                if not self.config.has_key('email'):
                     domain = '.'.join(socket.getfqdn().split('.')[1:])
-                    config['email'] = getpass.getuser() + '@' + domain
+                    self.config['email'] = getpass.getuser() + '@' + domain
             else:
                 pieces = debemail.split()
-                if not config.has_key('name'):
-                    config['name'] = ' '.join(pieces[:-1]).strip(' "')
-                if not config.has_key('email'):
-                    config['email'] = pieces[-1].strip(' <>')
+                if not self.config.has_key('name'):
+                    self.config['name'] = ' '.join(pieces[:-1]).strip(' "')
+                if not self.config.has_key('email'):
+                    self.config['email'] = pieces[-1].strip(' <>')
 
-        if not config.has_key('pager'):
+        if not self.config.has_key('pager'):
             # /etc/alternatives/pager in debian
             # defaults to "more" or "less" command
-            config['pager'] = 'pager'
+            self.config['pager'] = 'pager'
 
-        return config
+        return self.config
 
     def project_exists(self, project):
         return os.path.exists(self.get_project_basedir(project))
