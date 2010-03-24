@@ -61,9 +61,6 @@ class LogBook(object):
             help='show the current time on each logbook task')
         (options, args) = parser.parse_args()
 
-        if not len(args) < 0:
-            args.append('default')
-
         # execute the action based in the parsed args
         if options.s:
             return self.show_project(options.s)
@@ -72,10 +69,15 @@ class LogBook(object):
                     options.l, options.b, bool(options.t))
         elif options.d:
             return self.delete_project(options.d)
-        elif options.u or args:
-            return self.update_project(options.u or args[0], options.m)
         else:
-            parser.print_help()
+            if not options.u and not(args):
+                self.config = self.get_global_config()
+                if 'default' not in self.config:
+                    raise ProjectDoesNotExistError(
+                        'default project could not be found')
+
+                args.append(self.config['default'])
+            return self.update_project(options.u or args[0], options.m)
 
     def show_project(self, project):
         
@@ -190,15 +192,21 @@ class LogBook(object):
 
         return os.path.join(LOGBOOK_BASEDIR, project)
 
+    def get_global_config(self):
+
+        config = {}
+
+        # load global config
+        config_filename = os.path.join(LOGBOOK_BASEDIR, 'config')
+        if os.path.exists(config_filename):
+            execfile(config_filename, locals(), config)
+
+        return config
+
     def get_project_config(self, project):
 
         config = {}
         project_basedir = self.get_project_basedir(project)
-
-        # load general config
-        config_filename = os.path.join(os.path.dirname(project_basedir), 'config')
-        if os.path.exists(config_filename):
-            execfile(config_filename, locals(), config)
 
         # load project config
         config_filename = os.path.join(project_basedir, 'config')
