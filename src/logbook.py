@@ -59,10 +59,14 @@ class LogBook(object):
             help='delete a project')
         parser.add_option('-t', action='count',
             help='show the current time on each logbook task')
+        parser.add_option('-L', '--list', action='count',
+            help='list the configured projects')
         (options, args) = parser.parse_args()
 
         # execute the action based in the parsed args
-        if options.s:
+        if options.list:
+            return self.list_projects()
+        elif options.s:
             return self.show_project(options.s)
         elif options.c:
             return self.create_project(options.c, options.f,
@@ -78,6 +82,10 @@ class LogBook(object):
 
                 args.append(self.config['default'])
             return self.update_project(options.u or args[0], options.m)
+
+    def list_projects(self):
+        for project in self.get_configured_projects():
+            print project
 
     def show_project(self, project):
         
@@ -187,6 +195,13 @@ class LogBook(object):
         file_handler = file(config_filename, 'w')
         file_handler.write('\n'.join(config_lines))
         file_handler.close()
+
+    def get_configured_projects(self):
+        projects = []
+        for p in os.listdir(LOGBOOK_BASEDIR):
+            if os.path.isdir(os.path.join(LOGBOOK_BASEDIR, p)):
+                projects.append(p)
+        return projects
 
     def get_project_basedir(self, project):
 
