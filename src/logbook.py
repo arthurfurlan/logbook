@@ -75,7 +75,7 @@ class LogBook(object):
         elif options.d:
             return self.delete_project(options.d)
         else:
-            if not options.u and not(args):
+            if not options.u and not args:
                 if 'default' not in self.config:
                     raise ProjectDoesNotExistError(
                         'default project could not be found')
