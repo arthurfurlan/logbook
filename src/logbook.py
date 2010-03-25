@@ -229,6 +229,9 @@ class LogBook(object):
         # load project config
         config_filename = os.path.join(project_basedir, 'config')
         execfile(config_filename, {}, config)
+
+        if not hasattr(self, 'config'):
+            self.config = {}
         self.config.update(config)
 
         self.get_environ_config()
