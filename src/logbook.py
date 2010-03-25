@@ -16,6 +16,7 @@ import re
 import sys
 import glob
 import time
+import shlex
 import shutil
 import socket
 import getpass
@@ -330,9 +331,8 @@ class LogBookEditor(object):
         self.create_tmpfile()
         modify_date = os.path.getmtime(self.tmp_filename)
 
-        editor = self.config['editor']
-        cmd_args = [editor]
-        cmd_args.extend(self.get_editor_args(editor))
+        cmd_args = shlex.split(self.config['editor'])
+        cmd_args.extend(self.get_editor_args(cmd_args[0]))
         cmd_args.append(self.tmp_filename)
         subprocess.call(cmd_args)
 
