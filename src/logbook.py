@@ -76,11 +76,14 @@ class LogBook(object):
             return self.delete_project(options.d)
         else:
             if not options.u and not args:
-                if 'default' not in self.config:
+                projects = self.get_configured_projects()
+                if 'default' in self.config:
+                    args.append(self.config['default'])
+                elif len(projects) == 1:
+                    args.append(projects[0])
+                else:
                     raise ProjectDoesNotExistError(
                         'default project could not be found')
-
-                args.append(self.config['default'])
             return self.update_project(options.u or args[0], options.m)
 
     def list_projects(self):
