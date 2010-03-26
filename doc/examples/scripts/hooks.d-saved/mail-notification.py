@@ -11,6 +11,7 @@
 # /usr/share/common-licenses/GPL-2
 
 import sys
+import locale
 import socket
 import difflib
 import getpass
@@ -21,7 +22,7 @@ MAIL_HOST = 'localhost'
 MAIL_USER = ''
 MAIL_PASS = ''
 MAIL_FROM = getpass.getuser() + '@' + socket.getfqdn()
-MAIL_DEST = 'root'
+MAIL_DEST = 'root' + '@' + socket.getfqdn()
 
 try:
 	config = LogBook().get_project_config(sys.argv[1])
@@ -29,12 +30,20 @@ except ProjectDoesNotExistError, ex:
 	print 'mail-notification: project "%s" not found.' % sys.argv[1]
 	sys.exit(1)
 
+
+ENCODING = locale.getpreferredencoding().lower()
+MAIL_DEST = [MAIL_DEST] if type(MAIL_DEST) is not list else MAIL_DEST
+for k, v in enumerate(MAIL_DEST):
+    if not '@' in v:
+        MAIL_DEST[k] = v + '@' + socket.getfqdn()
+
 # create the email message
 subject = 'logbook: changes on project "%s"' % (sys.argv[1])
 message = []
 message.append('From: %s' % MAIL_FROM)
-message.append('To: %s' % MAIL_DEST)
-message.append('Subject: %s\n' % subject)
+message.append('To: %s' % ', '.join(MAIL_DEST))
+message.append('Subject: %s' % subject)
+message.append('Content-Type: text/plain; charset="%s"\n' % ENCODING)
 message.append('Changes on version %s of project "%s":\n' % tuple(sys.argv[2:0:-1]))
 
 # append the files diff to the message
