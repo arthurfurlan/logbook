@@ -60,7 +60,7 @@ class LogBook(object):
         parser.add_option('-d', metavar='PROJECT',
             help='delete a project')
         parser.add_option('-t', action='count',
-            help='show the current time on each logbook task')
+            help='do not show time in the logbook entries')
         parser.add_option('-L', '--list', action='count',
             help='list the configured projects')
         (options, args) = parser.parse_args()
@@ -72,7 +72,7 @@ class LogBook(object):
             return self.show_project(options.s)
         elif options.c:
             return self.create_project(options.c, options.f,
-                    options.l, options.b, bool(options.t))
+                    options.l, options.b, not bool(options.t))
         elif options.d:
             return self.delete_project(options.d)
         else:
@@ -101,7 +101,7 @@ class LogBook(object):
         return subprocess.call([self.config['pager'],
             self.config['logfile']])
 
-    def create_project(self, project, logfile=None, label=None, basedir=None, show_time=False):
+    def create_project(self, project, logfile=None, label=None, basedir=None, show_time=True):
 
         # create project directory
         if self.project_exists(project):
