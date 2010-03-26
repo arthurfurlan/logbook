@@ -37,9 +37,10 @@ class UpdateAbortedError(Exception):
 
 class LogBook(object):
 
-    def run(self):
+    def __init__(self):
         self.get_global_config()
 
+    def run(self):
         # configure and parse the args
         usage = 'Usage: %prog [OPTIONS] PROJECT'
         parser = optparse.OptionParser(usage=usage)
@@ -230,9 +231,6 @@ class LogBook(object):
         # load project config
         config_filename = os.path.join(project_basedir, 'config')
         execfile(config_filename, {}, config)
-
-        if not hasattr(self, 'config'):
-            self.config = {}
         self.config.update(config)
 
         self.get_environ_config()
