@@ -203,9 +203,12 @@ class LogBook(object):
 
     def get_configured_projects(self):
         projects = []
-        for p in os.listdir(LOGBOOK_BASEDIR):
-            if os.path.isdir(os.path.join(LOGBOOK_BASEDIR, p)):
-                projects.append(p)
+        try:
+            for p in os.listdir(LOGBOOK_BASEDIR):
+                if os.path.isdir(os.path.join(LOGBOOK_BASEDIR, p)):
+                    projects.append(p)
+        except OSError:
+            pass
         return projects
 
     def get_project_basedir(self, project):
