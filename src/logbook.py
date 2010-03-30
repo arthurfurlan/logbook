@@ -83,7 +83,7 @@ class LogBook(object):
                     args.append(projects[0])
                 else:
                     raise ProjectDoesNotExistError(
-                        'default project could not be found')
+                        'default project could not be found.')
             return self.update_project(options.u or args[0], options.m)
 
     def list_projects(self):
