@@ -24,6 +24,7 @@ import optparse
 import subprocess
 
 LOGBOOK_BASEDIR = os.path.expanduser('~/.logbook')
+LOGBOOK_SHAREDIR = os.path.realpath(os.path.join('..', os.path.dirname(__file__), 'doc', 'examples'))
 LOGBOOK_HOOKS = {'pre':'hooks.d-pre', 'saved':'hooks.d-saved', 'post':'hooks.d-post',}
 
 class ProjectExistsError(Exception):
@@ -122,7 +123,7 @@ class LogBook(object):
             if not os.path.exists(hooks_basedir):
                 os.mkdir(hooks_basedir)
 
-        self.create_config_file(project, logfile, label, basedir)
+        self.create_config_files(project, logfile, label, basedir)
 
     def delete_project(self, project):
 
@@ -168,7 +169,13 @@ class LogBook(object):
                     return False
         return True
 
-    def create_config_file(self, project, logfile, label, basedir):
+    def create_config_files(self, project, logfile, label, basedir):
+
+        # create the global configuration file if it doesn't exists
+        global_config_path = os.path.join(LOGBOOK_BASEDIR, 'config')
+        if not os.path.exists(global_config_path):
+            global_config_share_path = os.path.join(LOGBOOK_SHAREDIR, 'config', 'config.global')
+            shutil.copyfile(global_config_share_path, global_config_path)
 
         project_basedir = self.get_project_basedir(project)
         config_filename = os.path.join(project_basedir, 'config')
