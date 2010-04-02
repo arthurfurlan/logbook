@@ -1,0 +1,52 @@
+# -*- coding: utf-8 -*-
+
+# Copyright (C) 2008 Arthur Furlan <afurlan@afurlan.org>
+# Copyright (C) 2008 Felipe Augusto van de Wiel <faw@funlabs.org>
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or any later version.
+#
+# On Debian systems, you can find the full text of the license in
+# /usr/share/common-licenses/GPL-2
+
+# How configuration works on logbook?
+#
+# The logbook configuration works based on two configuration files. The first
+# one is the "global configuration file" (~/.logbook/config), which is loaded
+# just after the logbook is started. The second is the "project configuration
+# file" (~/.logbook/some-project/config), which is loaded after the project is
+# loaded and overrides the global configuration.
+
+
+# Command used to edit the logbook files. It defaults to "editor" command
+# (which, on Debian machines, points to '/usr/bin/nano') or to the $EDITOR
+# environment variable if setted.
+#editor = '/usr/bin/editor'
+
+# Command used to display the logbook files. It defaults to "pager" command,
+# which, on Debian machines, points to '/usr/bin/more' by default.
+#pager = '/usr/bin/more'
+
+# Your full name. It defaults to the respective part of the full name in the
+# $DEBEMAIL environment variable, if setted.
+#name = 'Your Full Name'
+
+# Your email address. It defaults to the respective part of the email address
+# in the $DEBEMAIL environment variable, if setted.
+#email = 'address@example.org'
+
+# The logbook file. Using this configuration you'll be able to setup your
+# project to use an external logbook file and maintain it (the file) over an
+# revision control system like svn, git, etc.
+#logfile = ''
+
+# The logbook file. Using this configuration you'll be able to setup your
+# project to use an external logbook file and maintain it (the file) and all
+# the hooks over an revision control system like svn, git, etc.
+#basedir = ''
+
+# Label of the project used in the logbook file. Useful to use a differente
+# project name, used in the command line, and the project label, used in the
+# logbook file.
+#label = ''
