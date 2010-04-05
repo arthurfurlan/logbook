@@ -23,25 +23,69 @@ import getpass
 import optparse
 import subprocess
 
-LOGBOOK_USERDIR = os.path.expanduser('~/.logbook')
-LOGBOOK_SHAREDIR = os.path.realpath(os.path.join('..', os.path.dirname(__file__), 'doc', 'examples'))
-LOGBOOK_HOOKS = {'pre':'hooks.d-pre', 'saved':'hooks.d-saved', 'post':'hooks.d-post',}
 
+# Directory which stores the user data
+LOGBOOK_USERDIR = os.path.realpath(os.path.expanduser('~/.logbook'))
+
+# Directory which stores some template files (configurations and scripts)
+LOGBOOK_SHAREDIR = os.path.realpath(os.path.join('..',
+        os.path.dirname(__file__), 'doc', 'examples'))
+
+# Current configured hooks and its script directories
+LOGBOOK_HOOKS = {
+    'pre': 'hooks.d-pre',       # before the temporary file is created
+    'saved': 'hooks.d-saved',   # after the temporary file is saved
+    'post': 'hooks.d-post',     # after the real logbook file is saved
+}
+
+
+# Exception thrown when a project currently exists. This exception is raised
+# if the user try to create a new project using a name that is already being
+# used by another project
 class ProjectExistsError(Exception):
+    '''
+    Exception thrown when a project currently exists. This exception is raised
+    if the user try to create a new project using a name that is already being
+    used by another project.
+    '''
     pass
 
+
+# Exception thrown when a project doesn't exists. This exception is raised if
+# the user try to work with a project that doesn't exists
 class ProjectDoesNotExistError(Exception):
+    '''
+    Exception thrown when a project doesn't exists. This exception is raised if
+    the user try to work with a project that doesn't exists.
+    '''
     pass
 
+# Exception thrown if the user execute the editor but doesn't make any changes
+# what means the user aborted the logbook update
 class UpdateAbortedError(Exception):
+    '''
+    Exception thrown if the user execute the editor but doesn't make any changes
+    what means the user aborted the logbook update.
+    '''
     pass
 
+
+# The main logbook class.
 class LogBook(object):
 
+
+    # Initial application setup
     def __init__(self):
-        self.get_global_config()
+        '''
+        Initial application setup.
+        '''
+
+        self.config = {}
+        self.load_config()
+
 
     def run(self):
+
         # configure and parse the args
         usage = 'Usage: %prog [OPTIONS] PROJECT'
         parser = optparse.OptionParser(usage=usage)
@@ -97,7 +141,7 @@ class LogBook(object):
             raise ProjectDoesNotExistError(
                 'project "%s" could not be found.' % project)
 
-        self.get_project_config(project)
+        self.load_config(project)
         return subprocess.call([self.config['pager'],
             self.config['logfile']])
 
@@ -141,7 +185,7 @@ class LogBook(object):
         elif not self.check_user_root():
             raise UpdateAbortedError()
 
-        self.get_project_config(project)
+        self.load_config(project)
         self.call_hooks(LOGBOOK_HOOKS['pre'])
 
         self.editor = LogBookEditor(self.config)
@@ -221,34 +265,29 @@ class LogBook(object):
 
         return os.path.join(LOGBOOK_USERDIR, project)
 
-    def get_global_config(self):
 
-        self.config = {}
+    # Load the configuration of a specific project, if "project" has any value,
+    # otherwise load the global logbook configuration
+    def load_config(self, project=''):
+        '''
+        Load the configuration of a specific project, if "project" has any value,
+        otherwise load the global logbook configuration.
+        '''
 
-        # load global config
-        config_filename = os.path.join(LOGBOOK_USERDIR, 'config')
-        if os.path.exists(config_filename):
-            execfile(config_filename, {}, self.config)
+        config_file_path = os.path.join(LOGBOOK_USERDIR, project, 'config')
+        if os.path.exists(config_file_path):
+            execfile(config_file_path, {}, self.config)
 
-        return self.config
-
-    def get_project_config(self, project):
-
-        config = {}
-        project_basedir = self.get_project_basedir(project)
-
-        # load project config
-        config_filename = os.path.join(project_basedir, 'config')
-        execfile(config_filename, {}, config)
-        self.config.update(config)
-
-        self.get_environ_config()
+        # load the configuration from the environment vars (if needed) and force
+        # some "non-optional" configuration values
+        self._load_environ_config()
         self.config['project'] = project
         self.config['user'] = getpass.getuser()
 
         return self.config
 
-    def get_environ_config(self):
+
+    def _load_environ_config(self):
 
         if not self.config.has_key('editor'):
             editor = os.environ.get('EDITOR')
