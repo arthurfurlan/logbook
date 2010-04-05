@@ -179,6 +179,7 @@ class LogBook(object):
 
         project_basedir = self.get_project_basedir(project)
         config_filename = os.path.join(project_basedir, 'config')
+        project_config_share_path = os.path.join(LOGBOOK_SHAREDIR, 'config', 'config.project')
 
         # get the (real) location of the logfile
         if not logfile:
@@ -187,23 +188,24 @@ class LogBook(object):
             logfile = os.path.expanduser(logfile)
         logfile = os.path.realpath(logfile)
 
-        # create the logfile if it doesn't exists
         if not os.path.exists(logfile):
-            open(logfile, 'w').close()
+            open(logfile, 'w+').close()
 
-        # create the configuration content
-        config_lines = []
-        config_lines.append(u"logfile = '%s'" % logfile)
-
+        config_data = {'logfile':logfile}
         if label:
-            config_lines.append(u"label = '%s'" % label)
+            config_data['label'] = label
         if basedir:
-            config_lines.append(u"basedir = '%s'" % basedir)
+            config_data['basedir'] = basedir
 
-        # create the configuration file
-        file_handler = file(config_filename, 'w')
-        file_handler.write('\n'.join(config_lines))
-        file_handler.close()
+        config_share_handler = open(project_config_share_path, 'r')
+        config_handler = open(config_filename, 'w+')
+        for line in config_share_handler:
+            for k, v in config_data.iteritems():
+                if re.match('\s*#?\s*%s\s*=' % k, line):
+                    line = "%s = '%s'\n" % (k, v)
+            config_handler.write(line)
+        config_share_handler.close()
+        config_handler.close()
 
     def get_configured_projects(self):
         projects = []
