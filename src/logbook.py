@@ -23,7 +23,7 @@ import getpass
 import optparse
 import subprocess
 
-LOGBOOK_BASEDIR = os.path.expanduser('~/.logbook')
+LOGBOOK_USERDIR = os.path.expanduser('~/.logbook')
 LOGBOOK_SHAREDIR = os.path.realpath(os.path.join('..', os.path.dirname(__file__), 'doc', 'examples'))
 LOGBOOK_HOOKS = {'pre':'hooks.d-pre', 'saved':'hooks.d-saved', 'post':'hooks.d-post',}
 
@@ -172,7 +172,7 @@ class LogBook(object):
     def create_config_files(self, project, logfile, label, basedir):
 
         # create the global configuration file if it doesn't exists
-        global_config_path = os.path.join(LOGBOOK_BASEDIR, 'config')
+        global_config_path = os.path.join(LOGBOOK_USERDIR, 'config')
         if not os.path.exists(global_config_path):
             global_config_share_path = os.path.join(LOGBOOK_SHAREDIR, 'config', 'config.global')
             shutil.copyfile(global_config_share_path, global_config_path)
@@ -210,8 +210,8 @@ class LogBook(object):
     def get_configured_projects(self):
         projects = []
         try:
-            for p in os.listdir(LOGBOOK_BASEDIR):
-                if os.path.isdir(os.path.join(LOGBOOK_BASEDIR, p)):
+            for p in os.listdir(LOGBOOK_USERDIR):
+                if os.path.isdir(os.path.join(LOGBOOK_USERDIR, p)):
                     projects.append(p)
         except OSError:
             pass
@@ -219,14 +219,14 @@ class LogBook(object):
 
     def get_project_basedir(self, project):
 
-        return os.path.join(LOGBOOK_BASEDIR, project)
+        return os.path.join(LOGBOOK_USERDIR, project)
 
     def get_global_config(self):
 
         self.config = {}
 
         # load global config
-        config_filename = os.path.join(LOGBOOK_BASEDIR, 'config')
+        config_filename = os.path.join(LOGBOOK_USERDIR, 'config')
         if os.path.exists(config_filename):
             execfile(config_filename, {}, self.config)
 
