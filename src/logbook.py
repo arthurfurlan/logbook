@@ -310,10 +310,9 @@ class LogBook(object):
         '''
 
         try:
-            if os.path.exists(self.editor.tmp_filename):
-                os.unlink(self.editor.tmp_filename)
-        except AttributeError:
-            return
+            os.unlink(self.editor.tmp_filename)
+        except (AttributeError, IOError):
+            pass
 
 
     # Check if the current running user is the root and if was, display a
