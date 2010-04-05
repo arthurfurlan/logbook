@@ -14,11 +14,15 @@ import sys
 import subprocess
 from logbook import LogBook, ProjectDoesNotExistError
 
-try:
-	config = LogBook().get_project_config(sys.argv[1])
-except ProjectDoesNotExistError, ex:
-	print 'svn-update: project "%s" not found.' % sys.argv[1]
-	sys.exit(1)
+if __name__ == '__main__':
 
-# update project
-subprocess.call(['svn', 'up', config['logfile'], '--quiet'])
+    # load the logbook project
+    try:
+        lb = LogBook()
+        lb.load_config(sys.argv[1])
+    except ProjectDoesNotExistError, ex:
+        print 'svn-update:', str(ex)
+        sys.exit(1)
+
+    # update the repository
+    subprocess.call(['svn', 'up', lb.config['logfile'], '--quiet'])

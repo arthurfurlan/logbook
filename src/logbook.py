@@ -232,6 +232,7 @@ class LogBook(object):
         # load the project congif and execute the "pre" hook scripts
         self.load_config(project)
         self._call_hooks(LOGBOOK_HOOKS['pre'])
+        return
 
         # execute the user editor if there's no message sent via command line
         self.editor = LogBookEditor(self.config)
@@ -283,6 +284,11 @@ class LogBook(object):
         Load the configuration of a specific project, if "project" has any value,
         otherwise load the global logbook configuration.
         '''
+
+        # check if the project really exists
+        if project and not self.project_exists(project):
+            raise ProjectDoesNotExistError(
+                'project "%s" could not be found.' % project)
 
         config_file_path = os.path.join(LOGBOOK_USERDIR, project, 'config')
         if os.path.exists(config_file_path):
