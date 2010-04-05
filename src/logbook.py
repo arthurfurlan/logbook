@@ -138,138 +138,137 @@ class LogBook(object):
                         'default project could not be found.')
             return self.do_update_project(opts.U or args[0], opts.m)
 
-
+    
+    # Print the list of configured projects
     def do_list_projects(self):
+        '''
+        Print the list of configured projects.
+        '''
+
         for project in self.get_configured_projects():
             print project
 
+
+    # View the file logbook file of a project
     def do_view_project(self, project):
-        
+        '''
+        View the file logbook file of a project.
+        '''
+
+        # check if the project really exists
         if not self.project_exists(project):
             raise ProjectDoesNotExistError(
                 'project "%s" could not be found.' % project)
 
+        # display the logbook file using the user "pager"
         self.load_config(project)
         return subprocess.call([self.config['pager'],
             self.config['logfile']])
 
-    def do_create_project(self, project, logfile=None, label=None, basedir=None):
 
-        # create project directory
+    # Create a new logbook project
+    def do_create_project(self, project, logfile=None, label=None, basedir=None):
+        '''
+        Create a new logbook project.
+        '''
+
+        # check if the project already exist
         if self.project_exists(project):
             raise ProjectExistsError(
                 'project "%s" already exists.' % project)
 
-        # create the project's base dir
+        # create the project directory into the user data directory
         project_basedir = self.get_project_basedir(project)
         os.makedirs(project_basedir)
         
-        # create the project's hooks dirs
+        # create the hook directories for the project
         if basedir:
-            basedir = os.path.realpath(basedir)
-            if not os.path.exists(basedir):
+            project_basedir = os.path.realpath(basedir)
+            if not os.path.exists(project_basedir):
                 os.makedirs(basedir)
-            project_basedir = basedir
+
         for hooks_basedir in LOGBOOK_HOOKS.values():
             hooks_basedir = os.path.join(project_basedir, hooks_basedir)
             if not os.path.exists(hooks_basedir):
                 os.mkdir(hooks_basedir)
 
-        self.create_config_files(project, logfile, label, basedir)
+        # create the project configuration file
+        self._create_config(project, logfile, label, basedir)
 
+
+    # Delete a logbook project
     def do_delete_project(self, project):
+        '''
+        Delete a logbook project.
+        '''
 
+        # check if the project really exists
         if not self.project_exists(project):
             raise ProjectDoesNotExistError(
                 'project "%s" could not be found.' % project)
 
+        # remove the project base directory but don't touch in other files,
+        # like external basedir or logfiles.
         shutil.rmtree(self.get_project_basedir(project))
 
-    def do_update_project(self, project, message=None):
 
+    # Update a logbook project
+    def do_update_project(self, project, message=None):
+        '''
+        Update a logbook project.
+        '''
+
+        # check if the project really exists
         if not self.project_exists(project):
             raise ProjectDoesNotExistError(
                 'project "%s" could not be found.' % project)
-        elif not self.check_user_root():
+        # ... and if the user running the application isn't the root
+        elif not self._check_user_root():
             raise UpdateAbortedError()
 
+        # load the project congif and execute the "pre" hook scripts
         self.load_config(project)
-        self.call_hooks(LOGBOOK_HOOKS['pre'])
+        self._call_hooks(LOGBOOK_HOOKS['pre'])
 
+        # execute the user editor if there's no message sent via command line
         self.editor = LogBookEditor(self.config)
         self.editor.parse()
-
         if not message:
             if not self.editor.edit_file():
                 raise UpdateAbortedError()
         else:
             self.editor.add_message_file(message)
 
-        self.call_hooks(LOGBOOK_HOOKS['saved'], send_all_args=True)
+        # commit the changes and executhe the respective hook scripts
+        self._call_hooks(LOGBOOK_HOOKS['saved'], send_all_args=True)
         self.editor.commit_changes()
-        self.call_hooks(LOGBOOK_HOOKS['post'], send_all_args=True)
+        self._call_hooks(LOGBOOK_HOOKS['post'], send_all_args=True)
 
-    def check_user_root(self):
-        login = getpass.getuser()
-        if login == 'root':
-            print "You're not supposed to update logbook as root."
-            option = ''
-            while option != 'y':
-                message = 'Would you like to proceed? [y/N] '
-                option = raw_input(message).strip().lower()
-                if not option or option == 'n':
-                    return False
-        return True
 
-    def create_config_files(self, project, logfile, label, basedir):
-
-        # create the global configuration file if it doesn't exists
-        global_config_path = os.path.join(LOGBOOK_USERDIR, 'config')
-        if not os.path.exists(global_config_path):
-            global_config_share_path = os.path.join(LOGBOOK_SHAREDIR, 'config', 'config.global')
-            shutil.copyfile(global_config_share_path, global_config_path)
-
-        project_basedir = self.get_project_basedir(project)
-        config_filename = os.path.join(project_basedir, 'config')
-        project_config_share_path = os.path.join(LOGBOOK_SHAREDIR, 'config', 'config.project')
-
-        # get the (real) location of the logfile
-        if not logfile:
-            logfile = os.path.join(basedir or project_basedir, 'logbook')
-        elif '~' in logfile:
-            logfile = os.path.expanduser(logfile)
-        logfile = os.path.realpath(logfile)
-
-        if not os.path.exists(logfile):
-            open(logfile, 'w+').close()
-
-        config_data = {'logfile':logfile}
-        if label:
-            config_data['label'] = label
-        if basedir:
-            config_data['basedir'] = basedir
-
-        config_share_handler = open(project_config_share_path, 'r')
-        config_handler = open(config_filename, 'w+')
-        for line in config_share_handler:
-            for k, v in config_data.iteritems():
-                if re.match('\s*#?\s*%s\s*=' % k, line):
-                    line = "%s = '%s'\n" % (k, v)
-            config_handler.write(line)
-        config_share_handler.close()
-        config_handler.close()
-
+    # Return a list containing all configured projects
     def get_configured_projects(self):
+        '''
+        Return a list containing all configured projects
+        '''
+
         projects = []
+
+        # Search for all projects into the user data directory
         try:
             for p in os.listdir(LOGBOOK_USERDIR):
                 if os.path.isdir(os.path.join(LOGBOOK_USERDIR, p)):
                     projects.append(p)
         except OSError:
             pass
+
         return projects
 
+
+    # Return the absolut base directory of a project
     def get_project_basedir(self, project):
+        '''
+        Return the absolut base directory of a project.
+        '''
 
         return os.path.join(LOGBOOK_USERDIR, project)
 
@@ -295,16 +294,69 @@ class LogBook(object):
         return self.config
 
 
-    def _load_environ_config(self):
+    # Check if a project really exists
+    def project_exists(self, project):
+        '''
+        Check if a project really exists.
+        '''
 
+        return os.path.exists(self.get_project_basedir(project))
+
+
+    # Remove the temporary file
+    def remove_tmpfile(self):
+        '''
+        Remove the temporary file.
+        '''
+
+        try:
+            if os.path.exists(self.editor.tmp_filename):
+                os.unlink(self.editor.tmp_filename)
+        except AttributeError:
+            return
+
+
+    # Check if the current running user is the root and if was, display a
+    # warning message and asks for confirmation to proceed. Logbook isn't
+    # intended to be updated by root
+    def _check_user_root(self):
+        '''
+        Check if the current running user is the root and if was, display a
+        warning message and asks for confirmation to proceed. Logbook isn't
+        intended to be updated by root.
+        '''
+
+        user = getpass.getuser()
+
+        # display the warning and asks for confirmation to proceed
+        if user == 'root':
+            print "You're not supposed to update logbook as root."
+            option = ''
+            while option != 'y':
+                message = 'Would you like to proceed? [y/N] '
+                option = raw_input(message).strip().lower()
+                if not option or option == 'n':
+                    return False
+
+        return True
+
+
+    # Load some configuration from environment vars (if needed)
+    def _load_environ_config(self):
+        '''
+        Load some configuration from environment vars (if needed).
+        '''
+
+        # if the user doesn't have the editor configured on logbook but has the
+        # $EDITOR variable defined, uses the environment configuration
         if not self.config.has_key('editor'):
             editor = os.environ.get('EDITOR')
             if not editor:
-                # /etc/alternatives/editor in debian
-                # defaults to "nano" command
                 editor = 'editor'
             self.config['editor'] = editor
 
+        # if the user doesn't have the name or email configured on logbook but
+        # has the $DEBEMAIL variable defined, uses the environment configuration
         if not self.config.has_key('name') or not self.config.has_key('email'):
             debemail =  os.environ.get('DEBEMAIL')
             if not debemail:
@@ -320,40 +372,87 @@ class LogBook(object):
                 if not self.config.has_key('email'):
                     self.config['email'] = pieces[-1].strip(' <>')
 
+        # set a default "pager" value if the user doesn't have one configured
         if not self.config.has_key('pager'):
-            # /etc/alternatives/pager in debian
-            # defaults to "more" or "less" command
             self.config['pager'] = 'pager'
 
-        return self.config
 
-    def project_exists(self, project):
-        return os.path.exists(self.get_project_basedir(project))
+    # Create the logbook project configuration file. The configuration files are
+    # based on templates of the "LOGBOOK_SHAREDIR" directory
+    def _create_config(self, project, logfile, label, basedir):
+        '''
+        Create the logbook project configuration file. The configuration files
+        are based on templates of the "LOGBOOK_SHAREDIR" directory.
+        '''
 
-    def remove_tmpfile(self):
-        try:
-            if os.path.exists(self.editor.tmp_filename):
-                os.unlink(self.editor.tmp_filename)
-        except AttributeError:
+        # create the global configuration file if it doesn't exist
+        global_config_file_path = os.path.join(LOGBOOK_USERDIR, 'config')
+        if not os.path.exists(global_config_file_path):
+            global_config_file_path_share = os.path.join(LOGBOOK_SHAREDIR,
+                    'config', 'config.global')
+            shutil.copyfile(global_config_file_path_share,
+                    global_config_file_path)
+
+        # get the configuration file paths
+        project_basedir = self.get_project_basedir(project)
+        project_config_file_path = os.path.join(project_basedir, 'config')
+        project_config_file_path_share = os.path.join(LOGBOOK_SHAREDIR,
+                'config', 'config.project')
+
+        # get the location of the logfile and create it as an empty file
+        if not logfile:
+            logfile = os.path.join(basedir or project_basedir, 'logbook')
+        elif '~' in logfile:
+            logfile = os.path.expanduser(logfile)
+        logfile = os.path.realpath(logfile)
+
+        if not os.path.exists(logfile):
+            open(logfile, 'w+').close()
+
+        # create the configuration file of the logbook project
+        config_data = {'logfile':logfile}
+        if label:
+            config_data['label'] = label
+        if basedir:
+            config_data['basedir'] = basedir
+
+        config_share_handler = open(project_config_file_path_share, 'r')
+        config_real_handler = open(project_config_file_path, 'w+')
+        for line in config_share_handler:
+            for k, v in config_data.iteritems():
+                if re.match('\s*#?\s*%s\s*=' % k, line):
+                    line = "%s = '%s'\n" % (k, v)
+            config_real_handler.write(line)
+        config_share_handler.close()
+        config_real_handler.close()
+
+
+    # Execute the respective scripts for a specified hook
+    def _call_hooks(self, hook, send_all_args=False):
+        '''
+        Execute the respective scripts for a specified hook.
+        '''
+
+        # get the hooks basedir of the project
+        basedir = self.get_project_basedir(self.config['project'])
+        basedir = self.config.get('basedir', basedir)
+        hooks_basedir = os.path.join(basedir, hook)
+
+        # create the hook directory if it doesn't exist
+        if not os.path.exists(hooks_basedir):
+            os.mkdir(hooks_basedir)
             return
 
-    def call_hooks(self, hooksd, send_all_args=False):
-
-        basedir = self.config.get('basedir', self.get_project_basedir(self.config['project']))
-        hooksd_dir = os.path.join(basedir, hooksd)
-
-        if not os.path.exists(hooksd_dir):
-            os.mkdir(hooksd_dir)
-            return
-
-        for s in glob.glob(hooksd_dir + '/*'):
-            script_file = os.path.join(hooksd_dir, s)
-            if os.access(script_file, os.X_OK):
-                cmd_args = [script_file, self.config['project']]
+        # execute all the scripts in the hooks directory
+        for s in glob.glob(hooks_basedir + '/*'):
+            script_file_path = os.path.join(hooks_basedir, s)
+            if os.access(script_file_path, os.X_OK):
+                cmd_args = [script_file_path, self.config['project']]
                 if send_all_args:
                     cmd_args.append(self.editor.get_current_version())
                     cmd_args.append(self.editor.tmp_filename)
                 subprocess.call(cmd_args)
+
 
 class LogBookEditor(object):
 
