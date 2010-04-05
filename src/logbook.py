@@ -318,7 +318,7 @@ class LogBook(object):
         '''
 
         try:
-            os.unlink(self.editor.tmp_filename)
+            os.unlink(self.editor.temp_file_name)
         except (AttributeError, IOError):
             pass
 
@@ -457,7 +457,7 @@ class LogBook(object):
                 cmd_args = [script_file_path, self.config['project']]
                 if send_all_args:
                     cmd_args.append(self.editor.get_current_version())
-                    cmd_args.append(self.editor.tmp_filename)
+                    cmd_args.append(self.editor.temp_file_name)
                 subprocess.call(cmd_args)
 
 
