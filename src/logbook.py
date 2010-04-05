@@ -84,43 +84,51 @@ class LogBook(object):
         self.load_config()
 
 
+    # Run the application via command line interface. Parse the arguments and
+    # execute the action based on them
     def run(self):
+        '''
+        Run the application via command line interface. Parse the arguments and
+        execute the action based on them.
+        '''
 
-        # configure and parse the args
-        usage = 'Usage: %prog [OPTIONS] PROJECT'
+        usage = 'Usage: %prog [OPTIONS] [PROJECT]'
         parser = optparse.OptionParser(usage=usage)
-        parser.add_option('-f', metavar='LOGFILE',
-            help='points the logfile to an external file')
+
+        # application actions
+        parser.add_option('-V', metavar='PROJECT',
+            help='view a logbook project')
+        parser.add_option('-C', metavar='PROJECT',
+            help='create a new logbook project')
+        parser.add_option('-U', metavar='PROJECT',
+            help='edit a logbook project')
+        parser.add_option('-D', metavar='PROJECT',
+            help='delete a logbook project')
+        parser.add_option('-L', '--list', action='count',
+            help='list the configured projects')
+
+        # application options
+        parser.add_option('-f', metavar='FILE',
+            help='configure the project to use an external file')
         parser.add_option('-m', metavar='MESSAGE',
-            help='update message')
+            help='set the update message')
         parser.add_option('-l', metavar='LABEL',
             help='project label to be used in the logbook file')
         parser.add_option('-b', metavar='BASEDIR',
             help='set the logbook base directory')
-        parser.add_option('-s', metavar='PROJECT',
-            help='show the logbook of a project')
-        parser.add_option('-c', metavar='PROJECT',
-            help='create a new project')
-        parser.add_option('-u', metavar='PROJECT',
-            help='update a project')
-        parser.add_option('-d', metavar='PROJECT',
-            help='delete a project')
-        parser.add_option('-L', '--list', action='count',
-            help='list the configured projects')
-        (options, args) = parser.parse_args()
+        (opts, args) = parser.parse_args()
 
-        # execute the action based in the parsed args
-        if options.list:
+        # execute the action
+        if opts.list:
             return self.list_projects()
-        elif options.s:
-            return self.show_project(options.s)
-        elif options.c:
-            return self.create_project(options.c, options.f,
-                    options.l, options.b)
-        elif options.d:
-            return self.delete_project(options.d)
+        elif opts.V:
+            return self.show_project(opts.V)
+        elif opts.C:
+            return self.create_project(opts.C, opts.f, opts.l, opts.b)
+        elif opts.D:
+            return self.delete_project(opts.D)
         else:
-            if not options.u and not args:
+            if not opts.U and not args:
                 projects = self.get_configured_projects()
                 if 'default' in self.config:
                     args.append(self.config['default'])
@@ -129,7 +137,8 @@ class LogBook(object):
                 else:
                     raise ProjectDoesNotExistError(
                         'default project could not be found.')
-            return self.update_project(options.u or args[0], options.m)
+            return self.update_project(opts.U or args[0], opts.m)
+
 
     def list_projects(self):
         for project in self.get_configured_projects():
