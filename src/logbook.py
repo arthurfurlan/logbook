@@ -70,8 +70,11 @@ class UpdateAbortedError(Exception):
     pass
 
 
-# The main logbook class.
+# Main application class
 class LogBook(object):
+    '''
+    Main application class.
+    '''
 
 
     # Initial application setup
@@ -237,7 +240,7 @@ class LogBook(object):
             if not self.editor.edit_file():
                 raise UpdateAbortedError()
         else:
-            self.editor.add_message_file(message)
+            self.editor.add_entry_message(message)
 
         # commit the changes and executhe the respective hook scripts
         self._call_hooks(LOGBOOK_HOOKS['saved'], send_all_args=True)
@@ -304,7 +307,7 @@ class LogBook(object):
 
 
     # Remove the temporary file
-    def remove_tmpfile(self):
+    def _remove_temp_file(self):
         '''
         Remove the temporary file.
         '''
@@ -453,127 +456,175 @@ class LogBook(object):
                 subprocess.call(cmd_args)
 
 
+# Class responsible for editting the files and for text editor handling
 class LogBookEditor(object):
+    '''
+    Class responsible for editting the files and for text editor handling.
+    '''
 
+
+    # Patterns used to parse the logbook entries
     entry_header_re = re.compile('^([^ ]+) \(([0-9]{8})\) (\w+); (\w+=\w+ ?)+$')
     entry_footer_re = re.compile('^ -- (.*) <([^>]+)>  (.*)$')
     entry_author_re = re.compile('^  \[ (.*) \]$')
     entry_task_re = re.compile('^  \* (.*)$')
 
+
+    # Initial setup based on the "config"
     def __init__(self, config):
-        self.config = config
+        '''
+        Initial setup based on the "config"
+        '''
+    
         self.content = ''
-        self.file_handler = open(self.config['logfile'])
-        self.file_content = ''
-        self.tmp_filename = '/tmp/logbook-%s-%d' % \
+        self.config = config
+
+        # start the file processing process
+        self.real_file_handler = open(self.config['logfile'])
+        self.temp_file_name = '/tmp/logbook-%s-%d' % \
             (self.config['project'], int(time.time()))
 
+
+    # Parse the current logfile in order to extract the current entry, if there
+    # is no current entry (an entry where the version date is "today") on file,
+    # create a new empty entry for this new update. After that, insert a new
+    # task containing only " * HH:MM "
     def parse(self):
+
+        # get the current entry on file
         self.current_entry = self.get_current_entry()
         
+        # set some data for the new task
         current_time = time.strftime('%H:%M ')
         task_content = '  * %s\n' % current_time
 
-        self.add_entry_tasks(self.current_entry, self.config['name'], task_content,
-            move_last_breakline=True)
+        # add a new task containig only " * HH:MM "
+        self.add_entry_tasks(self.current_entry, self.config['name'],
+            task_content, move_last_breakline=True)
 
+
+    # Create the temporary file and open the text editor to edit it
     def edit_file(self):
-        self.create_tmpfile()
-        modify_date = os.path.getmtime(self.tmp_filename)
+        '''
+        Create the temporary file and open the text editor to edit it.
+        '''
 
+        # create the temporary file and get the modify date
+        self._create_temp_file()
+        modify_date = os.path.getmtime(self.temp_file_name)
+
+        # get the editor args based on the user text editor and run it
         cmd_args = shlex.split(self.config['editor'])
         cmd_args.extend(self.get_editor_args(cmd_args[0]))
-        cmd_args.append(self.tmp_filename)
+        cmd_args.append(self.temp_file_name)
         subprocess.call(cmd_args)
 
-        return modify_date != os.path.getmtime(self.tmp_filename)
-    
-    def resolve_editor_path(self, editor):
-        for p in os.defpath.split(os.pathsep):
-            editor_path = os.path.join(p, editor)
-            if os.path.exists(editor_path):
-                return os.path.realpath(editor_path)
-        return editor
+        # return a value indicating if the file was changed
+        return modify_date != os.path.getmtime(self.temp_file_name)
 
+    
+    # Get the list of configuration arguments based on the text editor
     def get_editor_args(self, editor):
-        wrapsize = 70
+        '''
+        Get the list of configuration arguments based on the text editor.
+        '''
+
+        # text size and position
+        wrapsize = 80
         position = self.get_cursor_position()
 
-        editor = self.resolve_editor_path(editor)
+        # get the real path of the editor
+        editor = self._resolve_editor_path(editor)
         editor = os.path.basename(editor)
 
-        if editor in ['vim', 'vim.basic', 'vim.tiny', 'vi']:
+        # text editor: vim/vi
+        if editor in ['vim', 'vim.basic', 'vim.tiny', 'vi', 'gvim']:
             return ['+start', '-c', ':set tw=%d' % wrapsize,
                 '-c', ':call cursor(%d, %d)' % position]
 
+        # text editor: nano
         elif editor in ['nano', 'rnano']:
             return ['-r', str(wrapsize), '+%d,%d' % position]
 
+        # text editor: emacs
         elif editor in ['emacs', 'emacs22-x', 'emacsclient.emacs22']:
-            return ['--execute', "(setq-default auto-fill-function 'do-auto-fill)",
-                '+%d:%d' % position]
+            emacs_func = "(setq-default auto-fill-function 'do-auto-fill)"
+            return ['--execute', emacs_func, '+%d:%d' % position]
 
+        # other text editor
         return []
 
-    def add_message_file(self, message):
-        if not message.endswith('\n'):
-            message += '\n'
 
-        name = self.config['name']
-        self.current_entry['tasks'][name][-1] = \
-            self.current_entry['tasks'][name][-1][:-1]
-        self.add_entry_tasks(self.current_entry, self.config['name'],
-            message,  move_last_breakline=True)
-        self.create_tmpfile()
-
+    # Get the initial position of the cursor to get focus on the last task
     def get_cursor_position(self):
-        row, col = 1, 11
+        '''
+        Get the initial position of the cursor to get focus on the last task.
+        '''
 
+        # count the name titles and tasks to set the focused line
+        row, col = 1, 11
         for n in self.current_entry['names_order']:
             if len(self.current_entry['names_order']) > 1:
                 row += 1
-
             for t in self.current_entry['tasks'][n]:
                 row += t.count('\n')
-
             if n == self.config['name']:
                 break
 
         return row, col
 
-    def create_tmpfile(self):
-        file_handler = open(self.tmp_filename, 'w')
-        text = self.get_formatted_entry(self.current_entry) + self.content
-        file_handler.write(text)
-        file_handler.close()
 
+    # Get the current version, what (in a date-based version system) means the
+    # version of current day
     def get_current_version(self):
+        '''
+        Get the current version, what (in a date-based version system) means the
+        version of current day.
+        '''
+
         return time.strftime('%Y%m%d')
 
+
+    # Get the current entry (the entry of the current day) or, if there is no
+    # current entry, return a new empty entry
     def get_current_entry(self):
+        '''
+        Get the current entry (the entry of the current day) or, if there is no
+        current entry, return a new empty entry.
+        '''
+
         entry = self.get_empty_entry()
-        line = self.file_handler.readline()
+        line = self.real_file_handler.readline()
+
+        # if the there is no lines (empty file)
         if not line:
             return entry
 
+        # get the first "entry header" in the file
         values = self.entry_header_re.search(line)
         if not values:
             return entry
-
         values = values.groups()
+
+        # check if the this entry is the current entry (the entry of the current
+        # day), if not return an empty entry
         if values[1] != self.get_current_version():
             self.content = '\n' + line
-            self.content += ''.join(self.file_handler.readlines())
+            self.content += ''.join(self.real_file_handler.readlines())
             return entry
+
+        # ... otherwise, parse this entry
         else:
             entry['project'] = values[0]
             entry['hostname'] = values[2]
             entry['attrs'] = values[3:]
 
+            # parse all the entry tasks... the code below is complicated to
+            # explain and problably easier to understand by reading :)
             tasks = []
             values,name = None,None
             while not values:
-                line = self.file_handler.readline()
+                line = self.real_file_handler.readline()
                 values = self.entry_footer_re.search(line)
 
                 if values:
@@ -581,25 +632,35 @@ class LogBookEditor(object):
                     entry['name'] = values[0]
                     entry['email'] = values[1]
                     entry['datetime'] = values[2]
-
                     name = name or entry['name']
                     if tasks:
                         self.add_entry_tasks(entry, name, tasks)
+                        
                 elif self.entry_author_re.match(line):
                     if tasks:
                         self.add_entry_tasks(entry, name, tasks)
                     name = line.strip(' []\n')
                     tasks = []
+
                 elif self.entry_task_re.match(line):
                     tasks.append(line)
+
                 elif tasks and line:
                     tasks[-1] += line
+           
+            # save the rest of the file content
+            self.content += ''.join(self.real_file_handler.readlines())
 
-            self.content += ''.join(self.file_handler.readlines())
-
+        # return the just parsed entry
         return entry
 
+
+    # Get an empty entry using some default values based on the configuration
     def get_empty_entry(self):
+        '''
+        Get an empty entry using some default values based on the configuration.
+        '''
+
         return {
             'project': self.config['project'],
             'label': self.config.get('label', self.config['project']),
@@ -608,58 +669,151 @@ class LogBookEditor(object):
             'name': self.config['name'],
             'email': self.config['email'],
             'attrs': ['urgency=low'],
-            'tasks': {},
+            'tasks': {},    # no tasks for now
             'datetime':time.strftime('%a, %d %b %Y %H:%M:%S %z'),
             'names_order': [],
         }
 
+
+    # Get a string version of the entry, formatted in Debian Changelog Syntax
     def get_formatted_entry(self, entry):
+        '''
+        Get a string version of the entry, formatted in Debian Changelog Syntax.
+        '''
+
+        # entry header
         text = '%s (%s) %s; %s\n\n' % (entry['label'], entry['version'],
                 entry['hostname'], ' '.join(entry['attrs']))
+
+        # add the entry tasks (and users)
         for a in entry['names_order']:
             if len(entry['names_order']) > 1:
                 text += '  [ %s ]\n' % a
             for e in entry['tasks'][a]:
                 text += e
+
+        # entry footer
         text += ' -- %s <%s>  %s\n' % (entry['name'], entry['email'],
                 entry['datetime'])
+
         return text
 
+    
+    # Add a message to an entry directly and regenerate the temporary file
+    def add_entry_message(self, message):
+        '''
+        Add a message to an entry directly and regenerate the temporary file.
+        '''
+
+        # append a '\n' to end of the message
+        if not message.endswith('\n'):
+            message += '\n'
+
+        # add the message as a new task in the last entry
+        name = self.config['name']
+        self.current_entry['tasks'][name][-1] = \
+            self.current_entry['tasks'][name][-1][:-1]
+        self.add_entry_tasks(self.current_entry, self.config['name'],
+            message,  move_last_breakline=True)
+
+        # regenerate the temporary file
+        self._create_temp_file()
+
+
+    # Add a new tasks in an entry
     def add_entry_tasks(self, entry, name, tasks, move_last_breakline=False):
+        '''
+        Add a new tasks in an entry
+        '''
+
+        # if there is no entries of this user (aka 'name'), inser the user
         if name not in entry['tasks'].keys():
             entry['tasks'][name] = []
             entry['names_order'].append(name)
 
+        # move the last breakline, if needed
         if move_last_breakline and entry['tasks'][name]:
             entry['tasks'][name][-1] = entry['tasks'][name][-1][:-1]
 
+        # add all the tasks in the list to the entry
         if type(tasks) is list:
             if move_last_breakline:
                 tasks.append('\n')
             entry['tasks'][name].extend(tasks)
+
+        # or add  only one task to the entry
         elif type(tasks) is str:
             if move_last_breakline:
                 tasks += '\n'
             entry['tasks'][name].append(tasks)
 
+
+    # Commit the changes made on the temporary file on the real file
     def commit_changes(self):
-        tmp_handler = open(self.tmp_filename)
+        '''
+        Commit the changes made on the temporary file on the real file.
+        '''
+
+        # open the files
+        temp_handler = open(self.temp_file_name)
         file_handler = open(self.config['logfile'], 'w')
-        for line in tmp_handler:
+
+        # read lines from the temporary file and write on the real
+        for line in temp_handler:
             file_handler.write(line)
-        tmp_handler.close()
+
+        # close the files
+        temp_handler.close()
         file_handler.close()
 
+
+    # Create the temporary file to be editted
+    def _create_temp_file(self):
+        '''
+        Create the temporary file to be editted.
+        '''
+
+        # write all the entries on the file
+        file_handler = open(self.temp_file_name, 'w')
+        text = self.get_formatted_entry(self.current_entry) + self.content
+        file_handler.write(text)
+        file_handler.close()
+
+
+    # Find the real path of the editor program
+    def _resolve_editor_path(self, editor):
+        '''
+        Find the real path of the editor program.
+        '''
+
+        # lookup for the program in the directories of the $PYTHONPATH
+        for p in os.defpath.split(os.pathsep):
+            editor_path = os.path.join(p, editor)
+            if os.path.exists(editor_path):
+                return os.path.realpath(editor_path)
+
+        return editor
+
+
+# the main program code
 if __name__ == '__main__':
-    logbook = LogBook()
+
+    lb = LogBook()
+
+    # execute the logbook via command line interface
     try:
-        logbook.run()
-        sys.exit(0)
+        lb.run()
+
+    # if there is any error with the project
     except (ProjectExistsError, ProjectDoesNotExistError), ex:
         print 'Error:', str(ex)
         sys.exit(1)
+
+    # if the user didn't change the file
     except UpdateAbortedError, ex:
         print 'Aborting.'
         sys.exit(2)
+
+    # remove the temporary file
     finally:
-        logbook.remove_tmpfile()
+        lb._remove_temp_file()
