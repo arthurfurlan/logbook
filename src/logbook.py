@@ -232,7 +232,6 @@ class LogBook(object):
         # load the project congif and execute the "pre" hook scripts
         self.load_config(project)
         self._call_hooks(LOGBOOK_HOOKS['pre'])
-        return
 
         # execute the user editor if there's no message sent via command line
         self.editor = LogBookEditor(self.config)
