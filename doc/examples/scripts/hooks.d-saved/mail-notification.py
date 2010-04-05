@@ -18,45 +18,46 @@ import getpass
 import smtplib
 from logbook import LogBook, ProjectDoesNotExistError
 
+# mail settings
 MAIL_HOST = 'localhost'
 MAIL_USER = ''
 MAIL_PASS = ''
 MAIL_FROM = getpass.getuser() + '@' + socket.getfqdn()
-MAIL_DEST = 'root' + '@' + socket.getfqdn()
-
-try:
-	config = LogBook().get_project_config(sys.argv[1])
-except ProjectDoesNotExistError, ex:
-	print 'mail-notification: project "%s" not found.' % sys.argv[1]
-	sys.exit(1)
-
-
+MAIL_DEST = 'root'
 ENCODING = locale.getpreferredencoding().lower()
-MAIL_DEST = [MAIL_DEST] if type(MAIL_DEST) is not list else MAIL_DEST
-for k, v in enumerate(MAIL_DEST):
-    if not '@' in v:
-        MAIL_DEST[k] = v + '@' + socket.getfqdn()
 
-# create the email message
-subject = 'logbook: changes on project "%s"' % (sys.argv[1])
-message = []
-message.append('From: %s' % MAIL_FROM)
-message.append('To: %s' % ', '.join(MAIL_DEST))
-message.append('Subject: %s' % subject)
-message.append('Content-Type: text/plain; charset="%s"\n' % ENCODING)
-message.append('Changes on version %s of project "%s":\n' % tuple(sys.argv[2:0:-1]))
+if __name__ == '__main__':
 
-# append the files diff to the message
-srcname = config['logfile']
-srcfile = open(srcname)
-dstname = sys.argv[3]
-dstfile = open(dstname)
-content = difflib.unified_diff(srcfile.readlines(), dstfile.readlines(), srcname, dstname)
-message.append(''.join(content))
+    # load the logbook project
+    try:
+        lb = LogBook()
+        lb.load_config(sys.argv[1])
+    except ProjectDoesNotExistError, ex:
+        print 'mail-notification:', str(ex)
+        sys.exit(1)
 
-# send the notification
-smtp = smtplib.SMTP(MAIL_HOST)
-if MAIL_USER or MAIL_PASS:
-	smtp.login(MAIL_USER, MAIL_PASS)
-smtp.sendmail(MAIL_FROM, MAIL_DEST, '\n'.join(message))
-smtp.quit()
+    # create the message
+    subject = 'logbook: changes on project "%s"' % (sys.argv[1])
+    message = []
+    message.append('From: %s' % MAIL_FROM)
+    message.append('To: %s' % ', '.join(MAIL_DEST))
+    message.append('Subject: %s' % subject)
+    message.append('Content-Type: text/plain; charset="%s"\n' % ENCODING)
+    message.append('Changes on version %s of project "%s":\n' % \
+            tuple(sys.argv[2:0:-1]))
+
+    # append the unified diff
+    srcname = lb.config['logfile']
+    srcfile = open(srcname)
+    dstname = sys.argv[3]
+    dstfile = open(dstname)
+    content = difflib.unified_diff(srcfile.readlines(), \
+        dstfile.readlines(), srcname, dstname)
+    message.append(''.join(content))
+
+    # send the message
+    smtp = smtplib.SMTP(MAIL_HOST)
+    if MAIL_USER or MAIL_PASS:
+        smtp.login(MAIL_USER, MAIL_PASS)
+    smtp.sendmail(MAIL_FROM, MAIL_DEST, '\n'.join(message))
+    smtp.quit()
