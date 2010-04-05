@@ -97,11 +97,11 @@ class LogBook(object):
 
         # application actions
         parser.add_option('-V', metavar='PROJECT',
-            help='view a logbook project')
+            help='view a logbook project file')
         parser.add_option('-C', metavar='PROJECT',
             help='create a new logbook project')
         parser.add_option('-U', metavar='PROJECT',
-            help='edit a logbook project')
+            help='update a logbook project')
         parser.add_option('-D', metavar='PROJECT',
             help='delete a logbook project')
         parser.add_option('-L', '--list', action='count',
@@ -118,16 +118,15 @@ class LogBook(object):
             help='set the logbook base directory')
         (opts, args) = parser.parse_args()
 
-        # execute the action
-        if opts.list:
-            return self.list_projects()
-        elif opts.V:
-            return self.show_project(opts.V)
-        elif opts.C:
-            return self.create_project(opts.C, opts.f, opts.l, opts.b)
-        elif opts.D:
-            return self.delete_project(opts.D)
-        else:
+        if opts.list:   # list the configured projects
+            return self.do_list_projects()
+        elif opts.V:    # view a logbook project file
+            return self.do_view_project(opts.V)
+        elif opts.C:    # create a new logbook project
+            return self.do_create_project(opts.C, opts.f, opts.l, opts.b)
+        elif opts.D:    # delete a logbook project
+            return self.do_delete_project(opts.D)
+        else:           # update a logbook project
             if not opts.U and not args:
                 projects = self.get_configured_projects()
                 if 'default' in self.config:
@@ -137,14 +136,14 @@ class LogBook(object):
                 else:
                     raise ProjectDoesNotExistError(
                         'default project could not be found.')
-            return self.update_project(opts.U or args[0], opts.m)
+            return self.do_update_project(opts.U or args[0], opts.m)
 
 
-    def list_projects(self):
+    def do_list_projects(self):
         for project in self.get_configured_projects():
             print project
 
-    def show_project(self, project):
+    def do_view_project(self, project):
         
         if not self.project_exists(project):
             raise ProjectDoesNotExistError(
@@ -154,7 +153,7 @@ class LogBook(object):
         return subprocess.call([self.config['pager'],
             self.config['logfile']])
 
-    def create_project(self, project, logfile=None, label=None, basedir=None):
+    def do_create_project(self, project, logfile=None, label=None, basedir=None):
 
         # create project directory
         if self.project_exists(project):
@@ -178,7 +177,7 @@ class LogBook(object):
 
         self.create_config_files(project, logfile, label, basedir)
 
-    def delete_project(self, project):
+    def do_delete_project(self, project):
 
         if not self.project_exists(project):
             raise ProjectDoesNotExistError(
@@ -186,7 +185,7 @@ class LogBook(object):
 
         shutil.rmtree(self.get_project_basedir(project))
 
-    def update_project(self, project, message=None):
+    def do_update_project(self, project, message=None):
 
         if not self.project_exists(project):
             raise ProjectDoesNotExistError(
