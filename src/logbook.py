@@ -28,8 +28,8 @@ import subprocess
 LOGBOOK_USERDIR = os.path.realpath(os.path.expanduser('~/.logbook'))
 
 # Directory which stores some template files (configurations and scripts)
-LOGBOOK_SHAREDIR = os.path.realpath(os.path.join('..',
-        os.path.dirname(__file__), 'doc', 'examples'))
+LOGBOOK_BASEPATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+LOGBOOK_SHAREDIR = os.path.join(LOGBOOK_BASEPATH, 'doc', 'examples')
 
 # Current configured hooks and its script directories
 LOGBOOK_HOOKS = {
