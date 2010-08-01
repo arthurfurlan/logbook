@@ -1,0 +1,14 @@
+3cf918272ffa5de195752d73f3da3e5e  debian/DEBIAN/debian-binary
+e929b44280d3d40e066e4eaee00df116  debian/DEBIAN/md5sums
+d41d8cd98f00b204e9800998ecf8427e  debian/DEBIAN/conffiles
+20e3a9a1cebecc7cb8317a2cba159d7b  debian/DEBIAN/control
+aea92561bacf73524d103d6f95374fee  debian/usr/lib/python2.6/dist-packages/logbook.py
+785f5883635731fcf7085da4860a08e9  debian/usr/share/logbook/examples/config/config.global
+0769f6a669cf1f3fd449df694efe4925  debian/usr/share/logbook/examples/config/config.project
+c86058093770f5eb82d47293ac6d8246  debian/usr/share/logbook/examples/scripts/hooks.d-post/svn-commit.py
+0b3819fb7b1ef92b435dfbecbe23cd8d  debian/usr/share/logbook/examples/scripts/hooks.d-pre/svn-update.py
+a134901d1e195dd325a93b8e2e1cb384  debian/usr/share/logbook/examples/scripts/hooks.d-saved/mail-notification.py
+72cb4e0e04d6721ec8015c17f92795dc  debian/usr/share/doc/logbook/AUTHORS
+d32239bcb673463ab874e80d47fae504  debian/usr/share/doc/logbook/LICENSE
+87699d435ea66ae165ac30d37f024ce4  debian/usr/share/doc/logbook/README
+2c75d47bc6132ed3cfa586e2a174bb51  debian/usr/bin/logbook

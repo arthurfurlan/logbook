@@ -1,0 +1,11 @@
+Package: logbook
+Version: 261-1
+Architecture: all
+Maintainer: Arthur Furlan <afurlan@afurlan.org>
+Installed-Size: 1284
+Depends: python-support
+Section: admin
+Priority: optional
+Homepage: http://logbook.nullable.org
+Description: Documentation for servers
+ .
