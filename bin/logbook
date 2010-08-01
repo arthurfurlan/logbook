@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# Copyright (C) 2010 Arthur Furlan <afurlan@afurlan.org>
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or any later version.
+#
+# On Debian systems, you can find the full text of the license in
+# /usr/share/common-licenses/GPL-2
+
+if __name__ == '__main__':
+
+    import sys
+    import logbook
+
+    # create and run an instance of logbook
+    lb = logbook.LogBook()
+    try:
+        lb.run()
+    except (logbook.ProjectExistsError,
+            logbook.ProjectDoesNotExistError), ex:
+        print 'Error:', str(ex)
+        sys.exit(1)
+    except logbook.UpdateAbortedError, ex:
+        print 'Aborting.'
+        sys.exit(2)
+    finally:
+        lb._remove_temp_file()

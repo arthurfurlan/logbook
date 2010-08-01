@@ -798,27 +798,3 @@ class LogBookEditor(object):
                 return os.path.realpath(editor_path)
 
         return editor
-
-
-# the main program code
-if __name__ == '__main__':
-
-    lb = LogBook()
-
-    # execute the logbook via command line interface
-    try:
-        lb.run()
-
-    # if there is any error with the project
-    except (ProjectExistsError, ProjectDoesNotExistError), ex:
-        print 'Error:', str(ex)
-        sys.exit(1)
-
-    # if the user didn't change the file
-    except UpdateAbortedError, ex:
-        print 'Aborting.'
-        sys.exit(2)
-
-    # remove the temporary file
-    finally:
-        lb._remove_temp_file()
