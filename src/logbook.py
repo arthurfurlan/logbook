@@ -543,7 +543,8 @@ class LogBookEditor(object):
         editor = os.path.basename(editor)
 
         # text editor: vim/vi
-        if editor in ['vim', 'vim.basic', 'vim.tiny', 'vi', 'gvim']:
+        if editor in ['vim', 'vim.basic', 'vim.tiny', 'vi', 'gvim',
+                'vim.gnome']:
             return ['+start', '-c', ':set tw=%d' % wrapsize,
                 '-c', ':call cursor(%d, %d)' % position]
 
