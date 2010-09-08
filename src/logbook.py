@@ -546,7 +546,8 @@ class LogBookEditor(object):
         if editor in ['vim', 'vim.basic', 'vim.tiny', 'vi', 'gvim',
                 'vim.gnome']:
             return ['+start', '-c', ':set tw=%d' % wrapsize,
-                '-c', ':call cursor(%d, %d)' % position]
+                '-c', ':call cursor(%d, %d)' % position,
+                '-c', ':set autoindent']
 
         # text editor: nano
         elif editor in ['nano', 'rnano']:
