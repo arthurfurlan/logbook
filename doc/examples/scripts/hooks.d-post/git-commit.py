@@ -11,6 +11,7 @@
 # On Debian systems, you can find the full text of the license in
 # /usr/share/common-licenses/GPL-2
 
+import os
 import sys
 import subprocess
 from logbook import LogBook, ProjectDoesNotExistError
@@ -24,6 +25,9 @@ if __name__ == '__main__':
     except ProjectDoesNotExistError, ex:
         print 'git commit:', str(ex)
         sys.exit(1)
+
+    # change working directory to base project dir
+    os.chdir(lb.config['basedir'])
 
     # commit the repository changes
     msg = 'Changed version %s of the project "%s".' % tuple(sys.argv[2:0:-1])
